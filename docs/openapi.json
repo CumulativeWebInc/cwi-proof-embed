@@ -1,0 +1,43 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Catalog Proof Embed API",
+    "version": "1.0.0",
+    "description": "Sync verification stack, part one: embeddable, checkable proof for catalog claims (ISRCs, placements, rights contacts) that a music supervisor can verify before ever replying to an email. Proof, not hype. Public read-only API. All endpoints are static files served over HTTPS GET via GitHub Pages. No authentication required.",
+    "contact": {
+      "name": "Cumulative Web Inc",
+      "url": "https://cumulativeweb.com",
+      "email": "hp@cumulativeweb.com"
+    },
+    "license": {
+      "name": "See https://cumulativewebinc.github.io/cwi-legal/terms.html"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://cumulativewebinc.github.io/cwi-proof-embed",
+      "description": "Production"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "getProductPage",
+        "summary": "Product page",
+        "description": "Proof embed product UI",
+        "responses": {
+          "200": {
+            "description": "Product page",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
