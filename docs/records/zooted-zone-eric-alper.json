@@ -1,0 +1,14 @@
+{
+ "artist": "That Boy Hi Hat",
+ "claim_id": "zooted-zone-eric-alper",
+ "claim_text": "Zooted Zone \u2014 #316 of 320 on Eric Alper's \"360\u00b0: The Best Indie Music\"",
+ "evidence_tier": 1,
+ "evidence_tier_label": "direct scan \u2014 Spotify playlist API",
+ "note": "Playlist grew 216->320 tracks overnight 2026-09-17->09-18; position timeline #216/216 -> #316/320 recorded by the living press kit, last asserted at its 2026-09-19 deploy verification.",
+ "observed_at": "2026-09-19T08:39:55Z",
+ "record_version": 1,
+ "source": "CWI verification pipeline (Spotify playlist scan)",
+ "track": "Zooted Zone",
+ "ttl_hours": 48,
+ "verify_url": "https://cumulativewebinc.github.io/cwi-proof-embed/verify/?claim=zooted-zone-eric-alper"
+}

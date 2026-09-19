@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CWI Proof Verifier</title>
+<style>
+  body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:720px;margin:40px auto;padding:0 16px;color:#111;background:#fff}
+  .card{border:1px solid #ddd;border-radius:12px;padding:20px;margin:16px 0}
+  .pill{display:inline-block;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600}
+  .verified{background:#e6f6ec;color:#0d5c26;border:1px solid #1a7f37}
+  .stale{background:#fff3df;color:#8a4b08;border:1px solid #b25e09}
+  .invalid{background:#f1f3f4;color:#5f6368;border:1px solid #9aa0a6}
+  table{border-collapse:collapse;width:100%;margin-top:12px}
+  td{border-top:1px solid #eee;padding:8px 4px;vertical-align:top;font-size:14px}
+  td.k{color:#5f6368;width:150px}
+  pre{background:#f6f8fa;padding:12px;border-radius:8px;overflow:auto;font-size:12px}
+  a{color:#0b57d0}
+  .note{font-size:13px;color:#5f6368}
+</style>
+</head>
+<body>
+<h1>CWI Proof Verifier</h1>
+<p class="note">Every "verified by CWI" badge links here. This page re-fetches the backing record
+live and recomputes its status from <code>observed_at</code> vs its TTL. The badge on a third-party
+site is a convenience render — <strong>this page is the record of truth</strong>.</p>
+<div id="out"><p>Loading…</p></div>
+<script>
+(function(){
+  'use strict';
+  var BASE = 'https://cumulativewebinc.github.io/cwi-proof-embed';
+  var CLAIM_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
+  var ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})$/;
+  var out = document.getElementById('out');
+
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function statusFor(r, now){
+    if(!r || typeof r!=='object') return 'invalid';
+    if(typeof r.claim_text!=='string' || !r.claim_text.trim()) return 'invalid';
+    if(typeof r.observed_at!=='string' || !ISO_RE.test(r.observed_at)) return 'invalid';
+    var t = new Date(r.observed_at).getTime();
+    if(isNaN(t)) return 'invalid';
+    var ttl = Number(r.ttl_hours);
+    if(!isFinite(ttl) || ttl<=0) return 'invalid';
+    if(t > now + 60000) return 'invalid';
+    return ((now - t)/3600000) <= ttl ? 'verified' : 'stale';
+  }
+
+  var claim = (new URLSearchParams(location.search).get('claim')||'').trim().toLowerCase();
+  if(!CLAIM_RE.test(claim)){
+    out.innerHTML = '<div class="card"><span class="pill invalid">UNVERIFIED</span><p>No valid claim id was provided. A badge linking here with a malformed claim id cannot verify anything.</p></div>';
+    return;
+  }
+  fetch(BASE + '/records/' + claim + '.json', {cache:'no-store', headers:{'Accept':'application/json'}})
+    .then(function(res){ if(!res.ok) throw new Error('record HTTP '+res.status); return res.json(); })
+    .then(function(r){
+      var st = statusFor(r, Date.now());
+      var label = st==='verified' ? '<span class="pill verified">VERIFIED</span>'
+        : st==='stale' ? '<span class="pill stale">STALE — recheck needed</span>'
+        : '<span class="pill invalid">UNVERIFIED</span>';
+      var rows = [
+        ['Claim', esc(r.claim_text)], ['Artist', esc(r.artist||'—')], ['Track', esc(r.track||'—')],
+        ['Evidence tier', 'Tier '+esc(String(r.evidence_tier))+' — '+esc(r.evidence_tier_label||'')],
+        ['Observed at', esc(r.observed_at)], ['Freshness window', esc(String(r.ttl_hours))+' hours'],
+        ['Source', esc(r.source||'—')], ['Note', esc(r.note||'—')]
+      ].map(function(row){
+        return '<tr><td class="k">'+esc(row[0])+'</td><td>'+row[1]+'</td></tr>';
+      }).join('');
+      out.innerHTML = '<div class="card">'+label+'<table>'+rows+'</table>'+
+        '<p class="note">Raw backing record (exactly what the badge computed from):</p><pre>'+esc(JSON.stringify(r,null,2))+'</pre></div>';
+    })
+    .catch(function(err){
+      out.innerHTML = '<div class="card"><span class="pill invalid">UNVERIFIED</span><p>The backing record for <code>'+esc(claim)+'</code> could not be loaded ('+esc(err.message||'network')+'). No badge may claim verification without a live record.</p></div>';
+    });
+})();
+</script>
+</body>
+</html>
