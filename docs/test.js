@@ -29,7 +29,7 @@ t('rejects 65+ chars', L.sanitizeClaimId('a'.repeat(65)) === null);
 console.log('parseObservedAt (strict ISO-8601)');
 t('accepts Zulu', L.parseObservedAt('2026-09-19T08:00:00Z') === new Date('2026-09-19T08:00:00Z').getTime());
 t('accepts offset', L.parseObservedAt('2026-09-19T04:00:00-04:00') === new Date('2026-09-19T08:00:00Z').getTime());
-t('rejects date-only', L.parseObservedAt('2026-09-19') === null);
+t('accepts date-only as start-of-day UTC (honest when time unknown)', L.parseObservedAt('2026-09-18') === Date.UTC(2026, 8, 18));
 t('rejects human text', L.parseObservedAt('yesterday') === null);
 t('rejects empty', L.parseObservedAt('') === null);
 t('rejects Feb 30 (impossible date)', L.parseObservedAt('2026-02-30T00:00:00Z') === null);

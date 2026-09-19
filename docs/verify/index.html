@@ -30,16 +30,28 @@ site is a convenience render — <strong>this page is the record of truth</stron
   'use strict';
   var BASE = 'https://cumulativewebinc.github.io/cwi-proof-embed';
   var CLAIM_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
-  var ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})$/;
   var out = document.getElementById('out');
 
   function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function parseObservedAt(v){
+    if(typeof v!=='string') return null;
+    var s = /^\d{4}-\d{2}-\d{2}$/.test(v) ? v + 'T00:00:00Z' : v; // date-only: time of day unknown
+    var m = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-]\d{2}:?\d{2})$/);
+    if(!m) return null;
+    var Y=+m[1],Mo=+m[2],D=+m[3],H=+m[4],Mi=+m[5],S=+m[6];
+    if(Mo<1||Mo>12||D<1||D>31||H>23||Mi>59||S>60) return null;
+    var offMs=0;
+    if(m[7]!=='Z'){var om=m[7].match(/^([+-])(\d{2}):?(\d{2})$/);if(!om)return null;
+      offMs=(om[1]==='+'?-1:1)*((+om[2])*60+(+om[3]))*60000;}
+    var t=Date.UTC(Y,Mo-1,D,H,Mi,S)+offMs,d=new Date(t);
+    if(d.getUTCFullYear()!==Y||d.getUTCMonth()!==Mo-1||d.getUTCDate()!==D) return null;
+    return t;
+  }
   function statusFor(r, now){
     if(!r || typeof r!=='object') return 'invalid';
     if(typeof r.claim_text!=='string' || !r.claim_text.trim()) return 'invalid';
-    if(typeof r.observed_at!=='string' || !ISO_RE.test(r.observed_at)) return 'invalid';
-    var t = new Date(r.observed_at).getTime();
-    if(isNaN(t)) return 'invalid';
+    var t = parseObservedAt(r.observed_at);
+    if(t===null) return 'invalid';
     var ttl = Number(r.ttl_hours);
     if(!isFinite(ttl) || ttl<=0) return 'invalid';
     if(t > now + 60000) return 'invalid';

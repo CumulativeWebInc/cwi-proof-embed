@@ -21,7 +21,6 @@
 
   var BASE = 'https://cumulativewebinc.github.io/cwi-proof-embed';
   var CLAIM_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
-  var ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})$/;
 
   // ---- pure logic (also exercised by test.js in Node) ----
 
@@ -31,22 +30,27 @@
   }
 
   function parseObservedAt(v) {
-    if (typeof v !== 'string' || !ISO_RE.test(v)) return null;
-    var d = new Date(v);
-    if (isNaN(d.getTime())) return null;
-    // Reject impossible calendar dates that Date() silently normalizes
-    // (e.g. 2026-02-30 -> Mar 2): compare the date portion back.
-    var iso = d.toISOString().slice(0, 10);
-    if (iso !== v.slice(0, 10) && v.charAt(10) === 'T') {
-      // Allow timezone offsets: compare via UTC components instead.
-      var m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
-      if (!m) return null;
-      if (d.getUTCFullYear() !== +m[1] || d.getUTCMonth() + 1 !== +m[2] || d.getUTCDate() !== +m[3]) {
-        // For Z-suffixed values the slice must match exactly.
-        if (/Z$/.test(v)) return null;
-      }
+    if (typeof v !== 'string') return null;
+    var s = v;
+    // Date-only values are honest when the time of day is unknown:
+    // interpret as start of day UTC, no false precision claimed.
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) s = s + 'T00:00:00Z';
+    var m = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-]\d{2}:?\d{2})$/);
+    if (!m) return null;
+    var Y = +m[1], Mo = +m[2], D = +m[3], H = +m[4], Mi = +m[5], S = +m[6];
+    if (Mo < 1 || Mo > 12 || D < 1 || D > 31 || H > 23 || Mi > 59 || S > 60) return null;
+    var offMs = 0;
+    if (m[7] !== 'Z') {
+      var om = m[7].match(/^([+-])(\d{2}):?(\d{2})$/);
+      if (!om) return null;
+      offMs = (om[1] === '+' ? -1 : 1) * ((+om[2]) * 60 + (+om[3])) * 60000;
     }
-    return d.getTime();
+    var t = Date.UTC(Y, Mo - 1, D, H, Mi, S) + offMs;
+    var d = new Date(t);
+    // Reject impossible calendar dates Date.UTC silently normalizes
+    // (e.g. 2026-02-30 -> Mar 2): the components must round-trip.
+    if (d.getUTCFullYear() !== Y || d.getUTCMonth() !== Mo - 1 || d.getUTCDate() !== D) return null;
+    return t;
   }
 
   // Returns 'verified' | 'stale' | 'invalid'. Never guesses.
